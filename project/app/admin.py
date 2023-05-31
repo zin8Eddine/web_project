@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from dateutil.relativedelta import relativedelta
-from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation
+from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation,Pathologie
 
 class AssurerMaladeAdmin(admin.ModelAdmin):
     readonly_fields = ('dateFinDroit',)
@@ -32,18 +32,12 @@ admin.site.register(AssurerMalade80, AssurerMalade80Admin)
 
 
 
+class PathologieAdmin(admin.ModelAdmin):
+    list_display = ['nomPathologie']
 
 
-# admin.site.register(AssurerMaladePathologieAssociation, AssurerMaladePathologieAssociationAdmin)
+admin.site.register(Pathologie, PathologieAdmin)
 
-# class AssurerMaladePathologieAssociationAdmin(admin.ModelAdmin):
-#     ordering = ['assurer_malade__nom', 'pathologie__nomPathologie']
-#     list_filter = ['pathologie', 'assurer_malade__assurermalade80' ,'assurer_malade__assurermalade100']
-#     search_fields = ['assurer_malade__matricule', 'pathologie__id']
-#     list_display = ['assurer_malade', 'pathologie']
-
-
-# admin.site.register(AssurerMaladePathologieAssociation, AssurerMaladePathologieAssociationAdmin)
 
 
 class AssurerMaladeFilter(admin.SimpleListFilter):
@@ -68,8 +62,25 @@ class AssurerMaladeFilter(admin.SimpleListFilter):
 class AssurerMaladePathologieAssociationAdmin(admin.ModelAdmin):
     ordering = ['assurer_malade__nom', 'pathologie__nomPathologie']
     list_filter = [AssurerMaladeFilter, 'pathologie']
-    search_fields = ['assurer_malade__matricule', 'pathologie__id']
-    list_display = ['assurer_malade', 'pathologie']
+    search_fields = ['assurer_malade__matricule', 'pathologie__id','pathologie__nomPathologie']
+    list_display = ['assurer_malade', 'pathologie','assurer_malade_taux']
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "pathologie":
+            kwargs["queryset"] = Pathologie.objects.all()
+            
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    
+    
+    def assurer_malade_taux(self, obj):
+        if hasattr(obj.assurer_malade, 'assurermalade100'):
+            return '100'
+        elif hasattr(obj.assurer_malade, 'assurermalade80'):
+            return '80'
+        return ''
+
+    assurer_malade_taux.short_description = 'Taux Prise en Charge'
 
 
 admin.site.register(AssurerMaladePathologieAssociation, AssurerMaladePathologieAssociationAdmin)

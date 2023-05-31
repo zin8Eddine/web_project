@@ -53,9 +53,8 @@ class AssurerMalade(models.Model):
             self.statusAjour = True
 
         super().save(*args, **kwargs)
-        
-    
 
+# subcalsses AssurerMalade100 and AssurerMalade80
     
 class AssurerMalade100(AssurerMalade):
     tauxPriseCharge = 100
@@ -80,7 +79,7 @@ class AssurerMalade80(AssurerMalade):
 class Pathologie(models.Model):
     TYPE_DE_MALADIE_CHOICES = [(f'c{i}', f'c{i}') for i in range(1, 28)]
     nomPathologie = models.CharField(
-        max_length=3, choices=TYPE_DE_MALADIE_CHOICES, blank=True, null=True)
+        max_length=255, choices=TYPE_DE_MALADIE_CHOICES, blank=True, null=True)
 
     def __str__(self):
         return self.nomPathologie
