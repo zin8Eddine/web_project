@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from dateutil.relativedelta import relativedelta
-from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation,Pathologie
+from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation,Pathologie,Medicament,Consommation
 
 class AssurerMaladeAdmin(admin.ModelAdmin):
     readonly_fields = ('dateFinDroit',)
@@ -84,3 +84,21 @@ class AssurerMaladePathologieAssociationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(AssurerMaladePathologieAssociation, AssurerMaladePathologieAssociationAdmin)
+
+admin.site.register(Medicament)
+
+
+
+@admin.register(Consommation)
+class ConsommationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'assurer_malade', 'medicament', 'quantite', 'total_tarif_reference', 'total_prix_public']
+    list_filter = ['assurer_malade', 'medicament']
+    search_fields = ['medicament__nomMedicament']
+    readonly_fields = ['total_tarif_reference', 'total_prix_public']
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        Consommation.update_totals()
+
+
+
