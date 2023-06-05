@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from dateutil.relativedelta import relativedelta
-from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation,Pathologie,Medicament,Consommation
+from app.models import AssurerMalade80, AssurerMalade100, AssurerMaladePathologieAssociation, Pathologie, Medicament, Consommation, ConsommationTotal
+
 
 class AssurerMaladeAdmin(admin.ModelAdmin):
     readonly_fields = ('dateFinDroit',)
@@ -20,6 +21,7 @@ class AssurerMaladeAdmin(admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+
 class AssurerMalade80Admin(AssurerMaladeAdmin):
     search_fields = ['matricule']
 
@@ -27,9 +29,9 @@ class AssurerMalade80Admin(AssurerMaladeAdmin):
 class AssurerMalade100Admin(AssurerMaladeAdmin):
     search_fields = ['matricule']
 
+
 admin.site.register(AssurerMalade100, AssurerMalade100Admin)
 admin.site.register(AssurerMalade80, AssurerMalade80Admin)
-
 
 
 class PathologieAdmin(admin.ModelAdmin):
@@ -37,7 +39,6 @@ class PathologieAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Pathologie, PathologieAdmin)
-
 
 
 class AssurerMaladeFilter(admin.SimpleListFilter):
@@ -62,17 +63,16 @@ class AssurerMaladeFilter(admin.SimpleListFilter):
 class AssurerMaladePathologieAssociationAdmin(admin.ModelAdmin):
     ordering = ['assurer_malade__nom', 'pathologie__nomPathologie']
     list_filter = [AssurerMaladeFilter, 'pathologie']
-    search_fields = ['assurer_malade__matricule', 'pathologie__id','pathologie__nomPathologie']
-    list_display = ['assurer_malade', 'pathologie','assurer_malade_taux']
-    
+    search_fields = ['assurer_malade__matricule',
+                     'pathologie__id', 'pathologie__nomPathologie']
+    list_display = ['assurer_malade', 'pathologie', 'assurer_malade_taux']
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "pathologie":
             kwargs["queryset"] = Pathologie.objects.all()
-            
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-    
-    
-    
+
     def assurer_malade_taux(self, obj):
         if hasattr(obj.assurer_malade, 'assurermalade100'):
             return '100'
@@ -83,22 +83,25 @@ class AssurerMaladePathologieAssociationAdmin(admin.ModelAdmin):
     assurer_malade_taux.short_description = 'Taux Prise en Charge'
 
 
-admin.site.register(AssurerMaladePathologieAssociation, AssurerMaladePathologieAssociationAdmin)
+admin.site.register(AssurerMaladePathologieAssociation,
+                    AssurerMaladePathologieAssociationAdmin)
 
 admin.site.register(Medicament)
 
 
-
 @admin.register(Consommation)
 class ConsommationAdmin(admin.ModelAdmin):
-    list_display = ['id', 'assurer_malade', 'medicament', 'quantite', 'total_tarif_reference', 'total_prix_public']
-    list_filter = ['assurer_malade', 'medicament']
-    search_fields = ['medicament__nomMedicament']
-    readonly_fields = ['total_tarif_reference', 'total_prix_public']
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        Consommation.update_totals()
+    list_display = ('id', 'assurer_malade', 'medicament',
+                    'quantite', 'tarif_reference_Qnt', 'prix_public_Qnt')
+    list_filter = ('assurer_malade', 'medicament')
+    search_fields = ('medicament__nomMedicament',)
+    readonly_fields = ('tarif_reference_Qnt', 'prix_public_Qnt')
 
 
-
+@admin.register(ConsommationTotal)
+class ConsommationTotalAdmin(admin.ModelAdmin):
+    list_display = ('id', 'dataDebutTretment', 'dateFinTretment',
+                    'total_tarif_reference', 'total_prix_public')
+    date_hierarchy = 'dataDebutTretment'
+    filter_horizontal = ('consommations',)
+    readonly_fields = ('total_tarif_reference', 'total_prix_public')

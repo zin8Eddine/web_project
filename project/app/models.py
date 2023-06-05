@@ -1,5 +1,7 @@
 from dateutil.relativedelta import relativedelta
 from django.db import models
+from django.db.models import Sum
+from datetime import timedelta
 from django.utils import timezone
 
 
@@ -126,25 +128,60 @@ class Consommation(models.Model):
     )
     quantite = models.PositiveIntegerField(verbose_name='Quantité')
 
-    total_tarif_reference = models.DecimalField(
-        max_digits=9999, decimal_places=6, verbose_name='Total Tarif de Référence'
+    tarif_reference_Qnt = models.DecimalField(
+        max_digits=9999, decimal_places=6, verbose_name='Tarif de Référence par quantite'
     )
-    total_prix_public = models.DecimalField(
-        max_digits=9999, decimal_places=6, verbose_name='Total Prix Public'
+    prix_public_Qnt = models.DecimalField(
+        max_digits=9999, decimal_places=6, verbose_name='Total Prix Public par quantite'
     )
 
     @classmethod
     def update_totals(cls):
         consommations = cls.objects.all()
         for consommation in consommations:
-            consommation.total_tarif_reference = consommation.medicament.tarifReference * consommation.quantite
-            consommation.total_prix_public = consommation.medicament.prixPublic * consommation.quantite
+            consommation.tarif_reference_Qnt = consommation.medicament.tarifReference * consommation.quantite
+            consommation.prix_public_Qnt = consommation.medicament.prixPublic * consommation.quantite
             consommation.save()
 
     def save(self, *args, **kwargs):
-        self.total_tarif_reference = self.medicament.tarifReference * self.quantite
-        self.total_prix_public = self.medicament.prixPublic * self.quantite
+        self.tarif_reference_Qnt = self.medicament.tarifReference * self.quantite
+        self.prix_public_Qnt = self.medicament.prixPublic * self.quantite
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Consommation {self.id} - {self.medicament.nomMedicament}"
+
+class ConsommationTotal(models.Model):
+    dataDebutTretment = models.DateField()
+    dateFinTretment = models.DateField()
+    total_tarif_reference = models.DecimalField(max_digits=9999, decimal_places=6)
+    total_prix_public = models.DecimalField(max_digits=9999, decimal_places=6)
+    consommations = models.ManyToManyField(Consommation, related_name='consommation_totals')
+
+    @classmethod
+    def update_totals(cls):
+        # Calculate dataDebutTretment and dateFinTretment
+        data_debut = Consommation.objects.earliest('date').date
+        date_fin = data_debut + timedelta(days=90)
+
+        # Calculate total_tarif_reference and total_prix_public
+        totals = Consommation.objects.aggregate(
+            total_tarif_reference=Sum('tarif_reference_Qnt'),
+            total_prix_public=Sum('prix_public_Qnt')
+        )
+
+        # Get or create the ConsommationTotal instance
+        consommation_total, created = cls.objects.get_or_create(
+            defaults={
+                'dataDebutTretment': data_debut,
+                'dateFinTretment': date_fin,
+                'total_tarif_reference': totals['total_tarif_reference'],
+                'total_prix_public': totals['total_prix_public'],
+            }
+        )
+
+        # Update the consommations association
+        consommation_total.consommations.set(Consommation.objects.all())
+
+    def __str__(self):
+        return f"ConsommationTotal - {self.id}"
